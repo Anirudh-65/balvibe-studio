@@ -17,14 +17,14 @@ print("====================================================")
 h = requests.get(f"{BASE}/api/health", timeout=5).json()
 print("1. Health OK:", h.get("ok"))
 
-# 2. Stage 1: Generate Storyline Flow for 20s sample
-print("\n2. Stage 1: Generate Storyline Flow (20s)...")
+# 2. Stage 1: Generate Storyline Flow for calibrated 45s explainer
+print("\n2. Stage 1: Generate Storyline Flow (45s calm educational pacing)...")
 gen = requests.post(
     f"{BASE}/api/generate-storyline",
     json={
         "instruction": "Show the letter game on Magic Island. When looking at the center cross +, remember if you move your eyes away the magic boat sinks! Flashing letters appear, then masked. Report the letter marked by the blue cue.",
         "ageBand": "6-8",
-        "duration": 20,
+        "duration": 45,
         "targetLanguage": "en-US",
         "leadCharacter": "Magic Monkey",
         "setting": "Magic Island",

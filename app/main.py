@@ -308,6 +308,7 @@ def get_remotion_config(run_id: str, provider: str = "azure") -> JSONResponse:
 
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/")

@@ -136,12 +136,25 @@ $('new-run').onclick = reset;
 
 $('load-sample').onclick = () => {
   $('instruction').value =
-    'Show six numbers for exactly 2 seconds. Hide one number and ask the child to identify it. Include one practice round and three formal trials, then give a short closing. Do not tell the child whether an answer was correct.';
-  $('custom-character').value = 'Mira the moon rabbit';
-  $('custom-setting').value = 'lantern lit forest';
-  $('custom-story-idea').value = 'help find the missing flowers';
-  $('duration').value = '20';
+    'Show the letter game on Magic Island. When looking at the center cross +, remember if you move your eyes away the magic boat sinks! Flashing letters appear, then masked. Report the letter marked by the blue cue.';
+  $('custom-character').value = 'Magic Monkey';
+  $('custom-setting').value = 'Magic Island';
+  $('custom-story-idea').value = 'ride the magic boat to the secret door';
+  $('duration').value = '45';
+  if ($('mascot-style')) $('mascot-style').value = 'magic_monkey';
 };
+
+if ($('mascot-style')) {
+  $('mascot-style').onchange = (e) => {
+    if (e.target.value === 'magic_monkey') {
+      $('custom-character').value = 'Magic Monkey';
+      $('custom-setting').value = 'Magic Island';
+    } else if (e.target.value === 'mira_rabbit') {
+      $('custom-character').value = 'Mira the moon rabbit';
+      $('custom-setting').value = 'lantern lit forest';
+    }
+  };
+}
 
 // --- STAGE 1: GENERATE GAMIFIED STORYLINE FLOW ---
 $('generate-flow').onclick = async () => {

@@ -658,6 +658,8 @@ def generate_script_from_storyline(
         "8. Use [PAUSE N seconds] inside audioScript for silent stimulus display windows or response time.\n"
         "9. Do not include correctness feedback (e.g. do not say 'you got it right').\n"
         "10. Include a friendly closing scene that thanks the player without changing the setting or activity.\n"
+        "11. For explainers of 30s or longer, generate exactly 4 scenes mapping directly to the 4 progressive educational acts: "
+        "Scene 1 (Welcome & Mission intro), Scene 2 (Fixation cross & focus rule), Scene 3 (Live task walkthrough & letter report demo), Scene 4 (Joyful closing & practice readiness).\n"
         "Return ONLY one JSON object with a 'scenes' array. Each scene: durationSeconds, characterType, characterName, "
         "characterState, visualAssetTag, setting (must exactly match the fixed setting), audioScript, and optional trial."
     )

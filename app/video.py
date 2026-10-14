@@ -144,16 +144,11 @@ class VideoCompositionService:
 
             scene_order = active_scene["sceneOrder"]
 
-            # Keyframe interpolation for smooth motion
+            # Direct keyframe sampling for 100% crisp, razor-sharp video frames (zero ghosting)
             if loaded_keyframes:
                 kf_pos = cur_sec * (len(loaded_keyframes) - 1) / max(tot_sec, 0.001)
-                kf_a = max(0, min(len(loaded_keyframes) - 1, int(kf_pos)))
-                kf_b = min(len(loaded_keyframes) - 1, kf_a + 1)
-                blend_alpha = kf_pos - kf_a
-                if blend_alpha > 0.03 and kf_a != kf_b:
-                    base_img = Image.blend(loaded_keyframes[kf_a], loaded_keyframes[kf_b], alpha=blend_alpha)
-                else:
-                    base_img = loaded_keyframes[kf_a].copy()
+                kf_idx = max(0, min(len(loaded_keyframes) - 1, int(round(kf_pos))))
+                base_img = loaded_keyframes[kf_idx].copy()
             else:
                 base_img = loaded_images.get(scene_order, loaded_images[scenes[0]["sceneOrder"]]).copy()
 
