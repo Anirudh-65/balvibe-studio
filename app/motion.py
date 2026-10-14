@@ -157,7 +157,10 @@ class MotionKeyframeEngine:
         # Mascot sprites and props
         sprite_names = [
             "mascot_waving",
+            "mascot_waving_high",
+            "mascot_talking",
             "mascot_pointing",
+            "mascot_pointing_lean",
             "mascot_curious",
             "mascot_celebrating",
             "magic_boat",
@@ -306,6 +309,60 @@ class MotionKeyframeEngine:
             alpha = int(max(0, 220 * (1.0 - click_progress)))
             draw.ellipse([x - radius, y - radius, x + radius, y + radius], outline=(34, 197, 94, alpha), width=3)
 
+    def _render_animated_mascot(
+        self,
+        canvas: Image.Image,
+        sprite: Image.Image | None,
+        base_x: int,
+        base_y: int,
+        target_h: int = 490,
+        tilt_deg: float = 0.0,
+        scale_x: float = 1.0,
+        scale_y: float = 1.0,
+    ) -> None:
+        """Renders mascot with organic squash-and-stretch, bottom-pivot rotation, and contact shadow."""
+        if not sprite:
+            return
+        mw, mh = sprite.size
+        msc = target_h / float(mh)
+        cur_w = max(10, int(mw * msc * scale_x))
+        cur_h = max(10, int(target_h * scale_y))
+        scaled = sprite.resize((cur_w, cur_h), Image.Resampling.LANCZOS)
+
+        # Realistic floor shadow: stays anchored to floor (y=670) even during jumps
+        floor_y = 190 + target_h - 10
+        air_height = max(0, (190 + target_h) - (base_y + cur_h))
+        shadow_alpha = int(max(15, 55 * (1.0 - min(1.0, air_height / 50.0))))
+        shadow_w = int(cur_w * (0.60 + 0.15 * min(1.0, air_height / 50.0)))
+        shadow_h = int(18 * (1.0 - 0.3 * min(1.0, air_height / 50.0)))
+        shadow_cx = base_x + cur_w // 2
+
+        shadow_overlay = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        sdraw = ImageDraw.Draw(shadow_overlay)
+        sdraw.ellipse(
+            [shadow_cx - shadow_w // 2, floor_y - shadow_h // 2, shadow_cx + shadow_w // 2, floor_y + shadow_h // 2],
+            fill=(15, 23, 42, shadow_alpha),
+        )
+        canvas.paste(Image.alpha_composite(canvas.convert("RGBA"), shadow_overlay), (0, 0))
+
+        if abs(tilt_deg) > 0.2:
+            pad_bottom = int(cur_h * 0.25)
+            padded_w = cur_w * 2
+            padded_h = cur_h + pad_bottom
+            padded = Image.new("RGBA", (padded_w, padded_h), (0, 0, 0, 0))
+            padded.paste(scaled, (cur_w // 2, 0), scaled)
+            rotated = padded.rotate(tilt_deg, resample=Image.Resampling.BICUBIC, expand=True)
+            bbox = rotated.getbbox()
+            if bbox:
+                cropped = rotated.crop(bbox)
+                paste_x = base_x + (cur_w - cropped.width) // 2
+                paste_y = base_y + cur_h - cropped.height
+                canvas.paste(cropped, (paste_x, paste_y), cropped)
+            else:
+                canvas.paste(scaled, (base_x, base_y), scaled)
+        else:
+            canvas.paste(scaled, (base_x, base_y), scaled)
+
     def _render_explainer_scene(
         self,
         scene_order: int,
@@ -385,14 +442,41 @@ class MotionKeyframeEngine:
 
         if act == 1:
             # ========================================================
-            # ACT 1: WELCOME & SETTING THE STAGE
+            # ACT 1: WELCOME & STAGE ENTRANCE
             # ========================================================
-            mascot = self.sprites.get("mascot_waving")
-            if mascot:
-                mw, mh = mascot.size
-                msc = mascot_target_h / float(mh)
-                m_res = mascot.resize((int(mw * msc), mascot_target_h), Image.Resampling.LANCZOS)
-                canvas.paste(m_res, (mascot_base_x, mascot_base_y), m_res)
+            if scene_rel_sec < 1.8:
+                p = max(0.0, min(1.0, scene_rel_sec / 1.8))
+                ease_p = 1.0 - math.pow(1.0 - p, 3)
+                m_x = int(-220 + (40 - (-220)) * ease_p)
+                m_y = 190 + int(math.sin(p * math.pi * 3) * 10)
+                m_tilt = math.sin(p * math.pi * 3.5) * 4.0
+                m_sx, m_sy = 1.0, 1.0
+                mascot_sprite = self.sprites.get("mascot_waving")
+            else:
+                rel_t = scene_rel_sec - 1.8
+                m_x = int(40 + math.sin(rel_t * 1.6) * 10.0)
+                m_y = int(190 + math.cos(rel_t * 3.2) * 3.5)
+                m_tilt = math.sin(rel_t * 2.2) * 3.8
+                m_sx = 1.0 + 0.02 * math.sin(rel_t * 2.0)
+                m_sy = 1.0 - 0.015 * math.sin(rel_t * 2.0)
+
+                # Active multi-frame cycle: Waving hand vs Speaking/Presenting
+                sub_cycle = int(rel_t * 2.6) % 4
+                if (int(rel_t / 3.0) % 2) == 0:
+                    mascot_sprite = self.sprites.get("mascot_waving_high") if (sub_cycle % 2 == 1) else self.sprites.get("mascot_waving")
+                else:
+                    mascot_sprite = self.sprites.get("mascot_talking") if (sub_cycle % 2 == 1) else self.sprites.get("mascot_waving")
+
+            self._render_animated_mascot(
+                canvas,
+                mascot_sprite,
+                base_x=m_x,
+                base_y=m_y,
+                target_h=mascot_target_h,
+                tilt_deg=m_tilt,
+                scale_x=m_sx,
+                scale_y=m_sy,
+            )
 
             # Card Header
             draw.text((430, 85), "Welcome to Magic Island!", font=font_title, fill=(30, 41, 59))
@@ -424,12 +508,30 @@ class MotionKeyframeEngine:
             # ========================================================
             # ACT 2: EYE-TRACKING FIXATION RULE & GAMIFIED BOAT STAKE
             # ========================================================
-            mascot = self.sprites.get("mascot_pointing")
-            if mascot:
-                mw, mh = mascot.size
-                msc = mascot_target_h / float(mh)
-                m_res = mascot.resize((int(mw * msc), mascot_target_h), Image.Resampling.LANCZOS)
-                canvas.paste(m_res, (mascot_base_x, mascot_base_y), m_res)
+            # Steps closer to the screen (m_x: 75), leans forward intently
+            m_x = int(75 + math.sin(global_time_sec * 1.5) * 6.0)
+            m_y = int(190 + math.sin(global_time_sec * 2.2) * 3.0)
+            m_tilt = 4.2 + math.sin(global_time_sec * 2.0) * 1.8
+            m_sx = 1.0 + 0.015 * math.sin(global_time_sec * 2.5)
+            m_sy = 1.0 - 0.015 * math.sin(global_time_sec * 2.5)
+
+            # Emphatic teaching gesture: switches between upright pointing and leaning pointing
+            point_cycle = int(scene_rel_sec * 1.6) % 4
+            if point_cycle in (0, 1, 2):
+                mascot_sprite = self.sprites.get("mascot_pointing_lean") or self.sprites.get("mascot_pointing")
+            else:
+                mascot_sprite = self.sprites.get("mascot_pointing")
+
+            self._render_animated_mascot(
+                canvas,
+                mascot_sprite,
+                base_x=m_x,
+                base_y=m_y,
+                target_h=mascot_target_h,
+                tilt_deg=m_tilt,
+                scale_x=m_sx,
+                scale_y=m_sy,
+            )
 
             # Card Header
             draw.text((430, 85), "Rule 1: Keep Your Eyes on the Cross (+)", font=font_title, fill=(30, 41, 59))
@@ -474,17 +576,46 @@ class MotionKeyframeEngine:
             # 0.65 -> 0.75 * dur: Blue Probe Cue appears under position 5
             # 0.75 -> 0.90 * dur: Mouse Cursor glides slowly with cubic ease-in-out to button [L]
             # 0.90 -> 1.00 * dur: Click registered, ripple radiates, green CORRECT badge pops!
-
             is_clicked = act3_progress >= 0.88
             click_progress = max(0.0, min(1.0, (act3_progress - 0.88) / 0.12)) if is_clicked else 0.0
 
-            # Mascot selection: Curious thinking pose before click, Victory celebration after click!
-            mascot = self.sprites.get("mascot_celebrating") if is_clicked else self.sprites.get("mascot_curious")
-            if mascot:
-                mw, mh = mascot.size
-                msc = mascot_target_h / float(mh)
-                m_res = mascot.resize((int(mw * msc), mascot_target_h), Image.Resampling.LANCZOS)
-                canvas.paste(m_res, (mascot_base_x, mascot_base_y), m_res)
+            if act3_progress < 0.70:
+                # Thoughtful contemplation (hand on chin)
+                m_x = int(25 + math.cos(global_time_sec * 1.2) * 4.0)
+                m_y = int(190 + math.sin(global_time_sec * 1.5) * 3.0)
+                m_tilt = -3.5 + math.sin(global_time_sec * 1.4) * 1.8
+                m_sx = 1.0 + 0.015 * math.sin(global_time_sec * 1.8)
+                m_sy = 1.0 - 0.015 * math.sin(global_time_sec * 1.8)
+                mascot_sprite = self.sprites.get("mascot_curious")
+            elif act3_progress < 0.88:
+                # Leaning forward with anticipation as cursor moves
+                glide_p = (act3_progress - 0.70) / 0.18
+                m_x = int(25 + glide_p * 22.0)
+                m_y = int(190 - math.sin(glide_p * math.pi) * 8.0)
+                m_tilt = 2.0 + glide_p * 2.5
+                m_sx = 1.0 - 0.02 * glide_p
+                m_sy = 1.0 + 0.03 * glide_p
+                mascot_sprite = self.sprites.get("mascot_curious")
+            else:
+                # CLICK REGISTERED! Dynamic Victory Leap!
+                jump_y = -36.0 * math.sin(click_progress * math.pi)
+                m_x = int(45 + math.sin(click_progress * math.pi * 2) * 8.0)
+                m_y = int(190 + jump_y)
+                m_tilt = math.sin(click_progress * math.pi * 3) * 6.0
+                m_sy = 1.08 if click_progress < 0.7 else 0.94
+                m_sx = 0.94 if click_progress < 0.7 else 1.07
+                mascot_sprite = self.sprites.get("mascot_celebrating")
+
+            self._render_animated_mascot(
+                canvas,
+                mascot_sprite,
+                base_x=m_x,
+                base_y=m_y,
+                target_h=mascot_target_h,
+                tilt_deg=m_tilt,
+                scale_x=m_sx,
+                scale_y=m_sy,
+            )
 
             # Card Header
             draw.text((430, 80), "Live Task Demonstration: Working Memory", font=font_title, fill=(30, 41, 59))
@@ -578,14 +709,32 @@ class MotionKeyframeEngine:
             # ========================================================
             # ACT 4: JOYFUL CELEBRATION & READY TO PLAY!
             # ========================================================
-            mascot = self.sprites.get("mascot_celebrating")
-            if mascot:
-                mw, mh = mascot.size
-                msc = mascot_target_h / float(mh)
-                m_res = mascot.resize((int(mw * msc), mascot_target_h), Image.Resampling.LANCZOS)
-                # Joyful springy bounce loop
-                bounce_y = int(-14.0 * abs(math.sin(global_time_sec * 2.2)))
-                canvas.paste(m_res, (mascot_base_x, mascot_base_y + bounce_y), m_res)
+            # Authentic hopping physics with squash & stretch & lateral steps
+            jump_cycle = (global_time_sec * 3.6) % math.pi
+            jump_h = math.sin(jump_cycle) * 38.0
+            m_y = int(190 - jump_h)
+
+            if jump_h > 6.0:
+                m_sy = 1.0 + 0.08 * (jump_h / 38.0)
+                m_sx = 1.0 - 0.05 * (jump_h / 38.0)
+            else:
+                m_sy = 0.91
+                m_sx = 1.09
+
+            m_x = int(45 + math.sin(global_time_sec * 2.2) * 28.0)
+            m_tilt = math.sin(global_time_sec * 3.6) * 6.5
+            mascot_sprite = self.sprites.get("mascot_celebrating")
+
+            self._render_animated_mascot(
+                canvas,
+                mascot_sprite,
+                base_x=m_x,
+                base_y=m_y,
+                target_h=mascot_target_h,
+                tilt_deg=m_tilt,
+                scale_x=m_sx,
+                scale_y=m_sy,
+            )
 
             # Confetti rain particles drifting calmly
             for p in self.confetti_particles:
