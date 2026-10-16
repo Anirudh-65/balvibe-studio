@@ -6,6 +6,8 @@ __pycache__/
 .mypy_cache/
 data/*
 !data/.gitkeep
+!data/sample_images/
+!data/sample_images/*.jpg
 scratch_*
 node_modules/
 dist/

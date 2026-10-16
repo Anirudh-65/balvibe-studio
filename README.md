@@ -112,7 +112,8 @@ a Python web service with:
 - **Health check path:** `/api/health`
 
 Set the provider credentials as Render environment variables. Keep
-`BALVIBE_DEMO_MODE` set to `false` for live provider calls. The included
+`BALVIBE_DEMO_MODE` set to `true` for the sample-only deployment, or set it to
+`false` when live provider credentials are available. The included
 Blueprint uses `/tmp/balvibe` for data on the free web-service plan; its database
 and generated files are ephemeral and may be lost when the service restarts.
 Do not rely on that storage for durable research data.
@@ -124,6 +125,12 @@ Do not rely on that storage for durable research data.
 ```text
 data/
   balvibe.db
+  sample_images/
+    scene_001_intro.jpg
+    scene_002_practice.jpg
+    scene_003_hidden.jpg
+    scene_004_trial.jpg
+    scene_005_closing.jpg
   runs/
     run-xxxxxxxxxxxx/
       dataset_azure.json
@@ -167,18 +174,11 @@ running.
 The legacy `POST /api/generate-script` endpoint remains available for callers
 that need to create a storyline and script in one request.
 
-## Test
+## Validation
 
-Run the automated tests from the repository root:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-The tests use deterministic demo settings and cover storyline validation,
-approval gates, translation-provider behavior, both TTS output contracts,
-timing continuity, and persistence. They do not verify that live external API
-credentials work.
+The application can be checked without provider credentials by starting it in
+demo mode and opening `/api/health`. A healthy response contains `"ok": true`.
+The submitted deployment is configured for this sample-only mode.
 
 ## Provider notes
 
