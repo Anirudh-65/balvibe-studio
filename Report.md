@@ -117,19 +117,18 @@ subtitles and overlays -> voiceover muxing -> MP4 output**.
 
 The current demonstration version can be opened here:
 
-**[BalVibe Studio live demonstration](https://rare-waves-deny.loca.lt)**
+**[BalVibe Studio live demonstration](https://balvibe-studio.onrender.com/)**
 
 The same application is also available directly on the development machine
 at [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
 
-The public link is a temporary tunnel to the locally hosted version of my
-implementation, so it is available only while the local server and tunnel
-are running. The workflow should be tested using the loaded sample. In this
-version, the Gemini-style images are hardcoded or selected from local sample
-assets for testing; they are not generated through the Gemini API because the
-live image-generation model is priced. A permanent Render deployment can
-enable the live provider later by implementing the Gemini request and
-securely adding the API key as a server-side environment variable.
+The public link is a Render deployment of my implementation. The workflow
+should be tested using the loaded sample. In this version, the Gemini-style
+images are hardcoded or selected from local sample assets for testing; they
+are not generated through the Gemini API because the live image-generation
+model is priced. A future update can enable the live provider by implementing
+the Gemini request and securely adding the API key as a server-side
+environment variable.
 
 ### A
 
