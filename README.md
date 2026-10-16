@@ -61,24 +61,25 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-Create a `.env` file in the repository root. For live mode, add the credentials
-for the providers you will use:
+Create the local environment file by copying `.env.example` to `.env`:
 
-```dotenv
-BALVIBE_DEMO_MODE=false
-BALVIBE_DATA_DIR=./data
-GROQ_API_KEY=replace-with-your-groq-key
-GROQ_MODEL=qwen/qwen3.8-27b
-
-SARVAM_API_KEY=replace-with-your-sarvam-key
-BHASHINI_USER_ID=replace-with-your-bhashini-user-id
-BHASHINI_API_KEY=replace-with-your-bhashini-key
-AZURE_SPEECH_KEY=replace-with-your-azure-speech-key
-AZURE_SPEECH_REGION=centralindia
+```powershell
+Copy-Item .env.example .env
 ```
 
-Only credentials for providers you use are needed. Do not commit `.env`, put
-provider keys in frontend code, or share keys in screenshots or logs.
+The copied `.env` file is intentionally not included in the repository because
+it may contain private API credentials. For the sample demonstration, edit it
+to keep demo mode enabled:
+
+```dotenv
+BALVIBE_DEMO_MODE=true
+BALVIBE_DATA_DIR=./data
+GROQ_MODEL=qwen/qwen3.8-27b
+```
+
+Demo mode does not require provider API keys. To use live providers, add the
+required keys to this local `.env` file. Never commit `.env`, put provider
+keys in frontend code, or share keys in screenshots or logs.
 
 Start the app:
 
@@ -100,23 +101,6 @@ BALVIBE_DEMO_MODE=true
 Demo mode produces synthetic audio for testing the workflow; it is not a
 substitute for live translation or speech synthesis. Restart the server after
 changing environment variables.
-
-## Deploy on Render
-
-The repository includes a Render Blueprint in [`render.yaml`](render.yaml).
-Connect the repository in Render and create the Blueprint service, or configure
-a Python web service with:
-
-- **Build command:** `pip install -r requirements.txt`
-- **Start command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- **Health check path:** `/api/health`
-
-Set the provider credentials as Render environment variables. Keep
-`BALVIBE_DEMO_MODE` set to `true` for the sample-only deployment, or set it to
-`false` when live provider credentials are available. The included
-Blueprint uses `/tmp/balvibe` for data on the free web-service plan; its database
-and generated files are ephemeral and may be lost when the service restarts.
-Do not rely on that storage for durable research data.
 
 ## Data layout
 
@@ -178,7 +162,8 @@ that need to create a storyline and script in one request.
 
 The application can be checked without provider credentials by starting it in
 demo mode and opening `/api/health`. A healthy response contains `"ok": true`.
-The submitted deployment is configured for this sample-only mode.
+The downloaded folder is intended to be run locally for viewing the sample
+demonstration.
 
 ## Provider notes
 
@@ -199,6 +184,5 @@ motion keyframes, and deterministic MP4 video rendering. Generated content
 still requires researcher review, including checking that narration stays
 faithful to the approved protocol and storyline. The current SQLite and
 local-file storage setup is intended for development and prototyping, not
-durable multi-user production storage. The free Render deployment has less
-memory than a local development machine and is intended for the loaded sample;
-long or high-resolution renders may exceed its memory limit.
+durable multi-user production storage. The Gemini image provider remains a
+future live integration; the sample workflow uses local assets.

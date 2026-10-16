@@ -141,38 +141,19 @@ intermediate video with the combined narration. The final MP4 and the
 Remotion-compatible composition JSON are stored under the run's video
 directory and exposed through the video API endpoint.
 
-During deployment testing, this stage exposed a resource difference between
-the local machine and Render's free instance. The first implementation
-preloaded every 1280x720 keyframe into memory. Since a run can contain 80 to
-120 keyframes, this created a high peak memory requirement before encoding
-even began. The renderer was changed to retain only the current keyframe in
-memory and load the next required keyframe from disk as the frame timeline
-advances. This keeps the visual output and timeline mapping unchanged while
-reducing peak memory usage for the hosted service.
+The renderer is also memory-aware: instead of preloading every 1280x720
+keyframe, it retains only the current keyframe and loads the next required
+frame from disk as the timeline advances. Since a run can contain 80 to 120
+keyframes, this keeps peak memory usage lower without changing the visual
+timeline or final output.
 
-#### Hosted demonstration
+#### Running the demonstration
 
-The current demonstration version can be opened here:
-
-**[BalVibe Studio live demonstration](https://balvibe-studio.onrender.com/)**
-
-The same application is also available directly on the development machine
-at [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
-
-The public link is a Render deployment of my implementation. The workflow
-should be tested using the loaded sample. In this version, the Gemini-style
-images are hardcoded or selected from local sample assets for testing; they
-are not generated through the Gemini API because the live image-generation
-model is priced. A future update can enable the live provider by implementing
-the Gemini request and securely adding the API key as a server-side
-environment variable.
-
-The Render deployment uses the free web-service plan, so it has less memory
-than the development machine and uses ephemeral storage. The renderer now
-streams keyframes instead of preloading the complete keyframe set, but very
-long or high-resolution runs can still exceed free-tier limits. For a stable
-classroom demonstration, the loaded sample and its existing duration/FPS
-settings should be used.
+This folder can be downloaded and run locally to obtain the website and view
+the demonstration. The recommended demonstration path is to use the loaded
+sample in demo mode. The repository README contains the setup commands,
+including how to create the local environment file and start the FastAPI
+server.
 
 ### A
 
