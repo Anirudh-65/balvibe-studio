@@ -21,6 +21,11 @@ current version is intentionally a testing and demonstration build: its
 sample workflow works locally, while live Gemini image generation remains
 prepared as a future provider integration.
 
+Technically, the application is implemented as a FastAPI service with a
+browser-based frontend, a SQLite run database, and a local filesystem storage
+backend. The workflow is exposed through stage-specific REST endpoints, so
+each output is persisted and can be reviewed before the next stage begins.
+
 ## Contributions
 
 ### Work completed up to last week
@@ -90,6 +95,17 @@ single completely static image for the whole duration. The motion engine
 keeps the scene timeline and the generated visual sequence connected to the
 voiceover timing dataset.
 
+At the implementation level, the `PipelineService` selects the image provider
+and calls `generate_scene_images` for the selected run. The local provider
+implements the same provider contract as the future Gemini provider. It
+stores each generated image under the run directory and adds fields such as
+`imageFileName`, `imageUrl`, `imageProvider`, `imagePrompt`, and
+`imageStoragePath` to the scene record. The `MotionKeyframeEngine` then
+creates a bounded sequence of 80 to 120 JPEG keyframes from the scene
+timeline. Each keyframe has a time position, scene order, storage path, and
+browser URL, allowing the renderer to map time to a visual frame without
+reconstructing the experiment logic.
+
 #### Frame clubbing and final video rendering
 
 After the images and voiceover dataset are available, the composition stage
@@ -113,6 +129,27 @@ This completed the connection between the earlier voiceover work and the
 final video stage: **scene data -> images/keyframes -> timed frames ->
 subtitles and overlays -> voiceover muxing -> MP4 output**.
 
+The video stage is triggered through `POST /api/runs/{run_id}/render-video`.
+Before rendering, the service verifies that a voiceover timing dataset and a
+combined WAV file exist. It then calls `VideoCompositionService.render_video`.
+The service calculates `totalFrames` using the selected frame rate and the
+last scene's `endTimeMs`. For each frame it selects the active scene and the
+nearest motion keyframe, converts the PIL RGB image to an OpenCV BGR frame,
+and writes it to an intermediate MP4 using `cv2.VideoWriter`. A separate
+FFmpeg pass uses H.264 video, AAC audio, `yuv420p`, and `-shortest` to mux the
+intermediate video with the combined narration. The final MP4 and the
+Remotion-compatible composition JSON are stored under the run's video
+directory and exposed through the video API endpoint.
+
+During deployment testing, this stage exposed a resource difference between
+the local machine and Render's free instance. The first implementation
+preloaded every 1280x720 keyframe into memory. Since a run can contain 80 to
+120 keyframes, this created a high peak memory requirement before encoding
+even began. The renderer was changed to retain only the current keyframe in
+memory and load the next required keyframe from disk as the frame timeline
+advances. This keeps the visual output and timeline mapping unchanged while
+reducing peak memory usage for the hosted service.
+
 #### Hosted demonstration
 
 The current demonstration version can be opened here:
@@ -129,6 +166,13 @@ are not generated through the Gemini API because the live image-generation
 model is priced. A future update can enable the live provider by implementing
 the Gemini request and securely adding the API key as a server-side
 environment variable.
+
+The Render deployment uses the free web-service plan, so it has less memory
+than the development machine and uses ephemeral storage. The renderer now
+streams keyframes instead of preloading the complete keyframe set, but very
+long or high-resolution runs can still exceed free-tier limits. For a stable
+classroom demonstration, the loaded sample and its existing duration/FPS
+settings should be used.
 
 ### A
 

@@ -100,18 +100,17 @@ class VideoCompositionService:
         font_badge = get_bold_font(size=20)
         font_num = get_bold_font(size=24)
 
-        # Pre-load keyframes if available
-        loaded_keyframes: list[Image.Image] = []
+        # Keep keyframes on disk and load only the frame currently being
+        # encoded. Preloading every 1280x720 image can exceed small-host
+        # memory limits when a run contains 80-120 keyframes.
+        keyframe_paths: list[Path] = []
         if keyframes:
             for kf in keyframes:
                 kf_path = kf.get("storagePath")
                 if kf_path and os.path.exists(kf_path):
-                    try:
-                        loaded_keyframes.append(
-                            Image.open(kf_path).convert("RGB").resize((width, height), Image.Resampling.LANCZOS)
-                        )
-                    except Exception:
-                        pass
+                    keyframe_paths.append(Path(kf_path))
+        loaded_keyframe: Image.Image | None = None
+        loaded_keyframe_index: int | None = None
 
         # Fallback pre-load scene images
         loaded_images: dict[int, Image.Image] = {}
@@ -145,15 +144,23 @@ class VideoCompositionService:
             scene_order = active_scene["sceneOrder"]
 
             # Direct keyframe sampling for 100% crisp, razor-sharp video frames (zero ghosting)
-            if loaded_keyframes:
-                kf_pos = cur_sec * (len(loaded_keyframes) - 1) / max(tot_sec, 0.001)
-                kf_idx = max(0, min(len(loaded_keyframes) - 1, int(round(kf_pos))))
-                base_img = loaded_keyframes[kf_idx].copy()
+            if keyframe_paths:
+                kf_pos = cur_sec * (len(keyframe_paths) - 1) / max(tot_sec, 0.001)
+                kf_idx = max(0, min(len(keyframe_paths) - 1, int(round(kf_pos))))
+                if kf_idx != loaded_keyframe_index:
+                    with Image.open(keyframe_paths[kf_idx]) as keyframe_image:
+                        loaded_keyframe = keyframe_image.convert("RGB").resize(
+                            (width, height), Image.Resampling.LANCZOS
+                        )
+                    loaded_keyframe_index = kf_idx
+                if loaded_keyframe is None:
+                    raise RuntimeError("Unable to load the selected video keyframe.")
+                base_img = loaded_keyframe.copy()
             else:
                 base_img = loaded_images.get(scene_order, loaded_images[scenes[0]["sceneOrder"]]).copy()
 
             # Only draw HUD chips and dark subtitle box if fallback slides are used without keyframes
-            if not loaded_keyframes:
+            if not keyframe_paths:
                 draw = ImageDraw.Draw(base_img, "RGBA")
 
                 # A. Top Header Chips

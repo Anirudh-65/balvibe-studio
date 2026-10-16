@@ -194,9 +194,11 @@ credentials work.
 
 ## Scope and limitations
 
-BalVibe Studio is currently an MVP through voiceover and dataset generation; it
-does not render the final video. Generated content still requires researcher
-review, including checking that narration stays faithful to the approved
-protocol and storyline. The current SQLite and local-file storage setup is
-intended for development and prototyping, not durable multi-user production
-storage.
+BalVibe Studio supports the full demonstration path through scene images,
+motion keyframes, and deterministic MP4 video rendering. Generated content
+still requires researcher review, including checking that narration stays
+faithful to the approved protocol and storyline. The current SQLite and
+local-file storage setup is intended for development and prototyping, not
+durable multi-user production storage. The free Render deployment has less
+memory than a local development machine and is intended for the loaded sample;
+long or high-resolution renders may exceed its memory limit.
