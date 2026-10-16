@@ -10,7 +10,7 @@ services:
       - key: BALVIBE_DATA_DIR
         value: /tmp/balvibe
       - key: BALVIBE_DEMO_MODE
-        value: "false"
+        value: "true"
       - key: AZURE_SPEECH_REGION
         value: centralindia
       - key: GROQ_MODEL
