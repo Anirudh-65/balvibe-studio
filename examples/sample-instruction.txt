@@ -1,0 +1,1 @@
+Show six numbers for exactly 2 seconds. Hide one number and ask the child to identify it. Include one practice round and three formal trials, then give a short closing. Do not tell the child whether an answer was correct.
